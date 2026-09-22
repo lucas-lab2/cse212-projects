@@ -9,7 +9,7 @@ public static class SetsAndMaps
     ///
     /// For example, if words was: [am, at, ma, if, fi], we would return :
     ///
-    /// ["am & ma", "if & fi"]
+    /// ["am &amp; ma", "if &amp; fi"]
     ///
     /// The order of the array does not matter, nor does the order of the specific words in each string in the array.
     /// at would not be returned because ta is not in the list of words.
@@ -21,8 +21,35 @@ public static class SetsAndMaps
     /// <param name="words">An array of 2-character words (lowercase, no duplicates)</param>
     public static string[] FindPairs(string[] words)
     {
-        // TODO Problem 1 - ADD YOUR CODE HERE
-        return [];
+        // Single-pass O(n): track seen words, emit a pair when we encounter a word
+        // whose reverse was already seen.
+        var seen = new HashSet<string>(words.Length);
+        var results = new List<string>();
+
+        foreach (var word in words)
+        {
+            // Skip same-letter words like "aa" — they can never form a symmetric pair
+            if (word[0] == word[1])
+            {
+                seen.Add(word);
+                continue;
+            }
+
+            // Build reverse using char array to avoid string interpolation overhead
+            var reversed = new string(new[] { word[1], word[0] });
+
+            // If we've already seen the reverse, this completes a pair — emit it
+            if (seen.Contains(reversed))
+            {
+                results.Add($"{word} & {reversed}");
+            }
+            else
+            {
+                seen.Add(word);
+            }
+        }
+
+        return results.ToArray();
     }
 
     /// <summary>
@@ -42,7 +69,16 @@ public static class SetsAndMaps
         foreach (var line in File.ReadLines(filename))
         {
             var fields = line.Split(",");
-            // TODO Problem 2 - ADD YOUR CODE HERE
+
+            // The degree is in column 4 (0-indexed: index 3)
+            if (fields.Length > 3)
+            {
+                var degree = fields[3].Trim();
+                if (degrees.ContainsKey(degree))
+                    degrees[degree] += 1;
+                else
+                    degrees[degree] = 1;
+            }
         }
 
         return degrees;
@@ -66,8 +102,38 @@ public static class SetsAndMaps
     /// </summary>
     public static bool IsAnagram(string word1, string word2)
     {
-        // TODO Problem 3 - ADD YOUR CODE HERE
-        return false;
+        // Normalize: strip spaces and convert to lowercase
+        var normalized1 = word1.Replace(" ", "").ToLower();
+        var normalized2 = word2.Replace(" ", "").ToLower();
+
+        // Quick length check — if lengths differ, they can't be anagrams
+        if (normalized1.Length != normalized2.Length)
+            return false;
+
+        // Build a character frequency map from word1
+        var charFrequency = new Dictionary<char, int>();
+        foreach (var c in normalized1)
+        {
+            if (charFrequency.ContainsKey(c))
+                charFrequency[c] += 1;
+            else
+                charFrequency[c] = 1;
+        }
+
+        // Decrement frequencies using word2's characters
+        foreach (var c in normalized2)
+        {
+            if (!charFrequency.ContainsKey(c))
+                return false; // character not in word1 at all
+
+            charFrequency[c] -= 1;
+
+            if (charFrequency[c] < 0)
+                return false; // word2 has more of this character than word1
+        }
+
+        // All frequencies should be exactly 0 (guaranteed by equal lengths + no negatives above)
+        return true;
     }
 
     /// <summary>
@@ -96,11 +162,18 @@ public static class SetsAndMaps
 
         var featureCollection = JsonSerializer.Deserialize<FeatureCollection>(json, options);
 
-        // TODO Problem 5:
-        // 1. Add code in FeatureCollection.cs to describe the JSON using classes and properties 
-        // on those classes so that the call to Deserialize above works properly.
-        // 2. Add code below to create a string out each place a earthquake has happened today and its magitude.
-        // 3. Return an array of these string descriptions.
-        return [];
+        // Build formatted strings: "{place} - Mag {mag}"
+        var results = new List<string>();
+        if (featureCollection?.Features != null)
+        {
+            foreach (var feature in featureCollection.Features)
+            {
+                var place = feature.Properties?.Place ?? "Unknown";
+                var mag = feature.Properties?.Mag;
+                results.Add($"{place} - Mag {mag}");
+            }
+        }
+
+        return results.ToArray();
     }
 }
